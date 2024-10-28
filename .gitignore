@@ -1,32 +1,36 @@
-# Prerequisites
-*.d
+from flask import Flask, render_template, request
+import requests
+from moviepy.editor import *
+import os
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+app = Flask(__name__)
 
-# Precompiled Headers
-*.gch
-*.pch
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        url = request.form['url']
+        try:
+            # Descargar el archivo
+            response = requests.get(url, stream=True)
+            with open('temp.mp4', 'wb') as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+            # Convertir a MP3
+            video_clip = VideoFileClip("temp.mp4")
+            audio_clip = video_clip.audio
+            audio_clip.write_audiofile("output.mp3")
 
-# Fortran module files
-*.mod
-*.smod
+            # Eliminar el archivo temporal
+            video_clip.close()
+            audio_clip.close()
+            os.remove("temp.mp4")
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
+            return render_template('success.html')
+        except Exception as e:
+            return render_template('error.html', error_message=str(e))
+    return render_template('index.html')
 
-# Executables
-*.exe
-*.out
-*.app
+if __name__ == '__main__':
+    app.run(debug=True)
